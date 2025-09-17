@@ -382,8 +382,8 @@ describe('Performance Tracking API Contract', () => {
         
         // All records should be within date range
         response.body.records.forEach((record: any) => {
-          expect(new Date(record.periodStart)).toBeGreaterThanOrEqual(new Date('2025-09-01'));
-          expect(new Date(record.periodEnd)).toBeLessThanOrEqual(new Date('2025-09-30'));
+          expect(new Date(record.periodStart).getTime()).toBeGreaterThanOrEqual(new Date('2025-09-01').getTime());
+          expect(new Date(record.periodEnd).getTime()).toBeLessThanOrEqual(new Date('2025-09-30').getTime());
         });
       });
     });
@@ -477,17 +477,4 @@ describe('Performance Tracking API Contract', () => {
   });
 });
 
-// Test helper functions
-async function makeRequest(url: string, options: any) {
-  throw new Error(`API endpoint ${url} not yet implemented`);
-}
-
-async function getAuthToken(email: string): Promise<string> {
-  throw new Error('Authentication service not yet implemented');
-}
-
-function getInstanceIdForTargetType(targetType: string): number {
-  // This would return appropriate instance ID based on target type
-  // For now, just return 1
-  throw new Error('Instance lookup not yet implemented');
-}
+import { makeRequest, getAuthToken, getInstanceIdForTargetType } from '../utils/testHelpers';

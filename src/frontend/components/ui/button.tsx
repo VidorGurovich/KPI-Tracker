@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { motion, HTMLMotionProps } from "framer-motion"
+import { motion } from "framer-motion"
 import { cn } from "../../lib/utils"
 
 const buttonVariants = cva(
@@ -35,7 +35,8 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">,
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 
+    "children" | "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd" | "onTransitionEnd">,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
   loading?: boolean
@@ -61,8 +62,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const motionProps = {
       whileHover: { scale: disabled ? 1 : 1.02 },
       whileTap: { scale: disabled ? 1 : 0.98 },
-      transition: { duration: 0.15, ease: "easeOut" }
+      transition: { duration: 0.15, ease: "easeOut" as const }
     }
+
+    // Extract only safe HTML button props
+    const {
+      onClick, onMouseEnter, onMouseLeave, onFocus, onBlur, type, name, value, form, 
+      formAction, formEncType, formMethod, formNoValidate, formTarget, autoFocus
+    } = restProps;
+
+    const buttonProps = {
+      onClick, onMouseEnter, onMouseLeave, onFocus, onBlur, type, name, value, form,
+      formAction, formEncType, formMethod, formNoValidate, formTarget, autoFocus
+    };
 
     return (
       <MotionButton
@@ -70,7 +82,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         {...motionProps}
-        {...restProps}
+        {...buttonProps}
       >
         {loading && (
           <motion.div

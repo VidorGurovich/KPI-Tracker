@@ -35,7 +35,8 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 
+    "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd" | "onTransitionEnd">,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
   loading?: boolean
@@ -55,16 +56,26 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       )
     }
 
+    // Extract only safe HTML button props
+    const {
+      onMouseEnter, onMouseLeave, onFocus, onBlur, type, name, value, form, 
+      formAction, formEncType, formMethod, formNoValidate, formTarget, autoFocus
+    } = props;
+
+    const buttonProps = {
+      onClick, onMouseEnter, onMouseLeave, onFocus, onBlur, type, name, value, form,
+      formAction, formEncType, formMethod, formNoValidate, formTarget, autoFocus
+    };
+
     return (
       <motion.button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
-        onClick={onClick}
         whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
         whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        {...props}
+        transition={{ duration: 0.15, ease: "easeOut" as const }}
+        {...buttonProps}
       >
         {loading && (
           <motion.div

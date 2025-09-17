@@ -327,18 +327,4 @@ describe('Authentication API Contract', () => {
   });
 });
 
-// Test helper functions (these will fail until implementation exists)
-async function makeRequest(url: string, options: any) {
-  // This will fail until we implement the actual API endpoints
-  throw new Error(`API endpoint ${url} not yet implemented`);
-}
-
-async function verifyUserEmail(email: string) {
-  // This will fail until we implement email verification
-  throw new Error('Email verification not yet implemented');
-}
-
-async function getVerificationToken(email: string): Promise<string> {
-  // This will fail until we implement token retrieval
-  throw new Error('Verification token retrieval not yet implemented');
-}
+import { makeRequest, verifyUserEmail, getVerificationToken } from '../utils/testHelpers';

@@ -474,10 +474,4 @@ function getSampleKPIDefinition() {
   };
 }
 
-async function makeRequest(url: string, options: any) {
-  throw new Error(`API endpoint ${url} not yet implemented`);
-}
-
-async function getAuthToken(email: string): Promise<string> {
-  throw new Error('Authentication service not yet implemented');
-}
+import { makeRequest, getAuthToken } from '../utils/testHelpers';
