@@ -36,6 +36,8 @@ export interface TokenPayload {
   userId: number;
   email: string;
   role: string;
+  firstName: string;
+  lastName: string;
   iat: number;
   exp: number;
 }
@@ -49,11 +51,11 @@ export interface AuthServiceConfig {
 }
 
 export class AuthenticationService {
-  private userModel: UserModel;
+  private getUserModel: () => UserModel;
   private config: AuthServiceConfig;
 
   constructor(config?: Partial<AuthServiceConfig>) {
-    this.userModel = new UserModel();
+    this.getUserModel = () => new UserModel();
     this.config = {
       jwtSecret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
       jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
@@ -73,7 +75,9 @@ export class AuthenticationService {
     message: string;
   }> {
     try {
-      const user = await this.userModel.create(userData);
+      // Create user with hashed password
+      const userModel = this.getUserModel();
+      const user = await userModel.create(userData);
       
       return {
         user,
@@ -95,7 +99,8 @@ export class AuthenticationService {
     const { email, password } = credentials;
 
     // Find user by email
-    const user = this.userModel.findByEmail(email);
+    const userModel = this.getUserModel();
+    const user = userModel.findByEmail(email);
     if (!user) {
       throw new Error('Invalid credentials');
     }
@@ -106,7 +111,7 @@ export class AuthenticationService {
     }
 
     // Validate password
-    const isValidPassword = await this.userModel.validateUserPassword(user.id, password);
+    const isValidPassword = await userModel.validateUserPassword(user.id, password);
     if (!isValidPassword) {
       throw new Error('Invalid credentials');
     }
@@ -117,7 +122,7 @@ export class AuthenticationService {
     return {
       token,
       expiresIn: this.config.jwtExpiresIn,
-      user: this.userModel.toSafeData(user)
+      user: userModel.toSafeData(user)
     };
   }
 
@@ -130,15 +135,16 @@ export class AuthenticationService {
     user?: UserSafeData;
   }> {
     try {
-      const isVerified = this.userModel.verifyEmail(token);
+      const userModel = this.getUserModel();
+      const isVerified = userModel.verifyEmail(token);
       
       if (isVerified) {
         // Get the user by token to return safe data
-        const user = this.userModel.findByVerificationToken(token);
+        const user = userModel.findByVerificationToken(token);
         return {
           success: true,
           message: 'Email verified successfully. You can now log in.',
-          user: user ? this.userModel.toSafeData(user) : undefined
+          user: user ? userModel.toSafeData(user) : undefined
         };
       } else {
         return {
@@ -161,7 +167,8 @@ export class AuthenticationService {
     success: boolean;
     message: string;
   }> {
-    const user = this.userModel.findByEmail(email);
+    const userModel = this.getUserModel();
+    const user = userModel.findByEmail(email);
     if (!user) {
       // Don't reveal if email exists for security
       return {
@@ -177,7 +184,7 @@ export class AuthenticationService {
       };
     }
 
-    await this.userModel.generateNewVerificationToken(user.id);
+    await userModel.generateNewVerificationToken(user.id);
 
     return {
       success: true,
@@ -194,7 +201,8 @@ export class AuthenticationService {
   }> {
     const { email } = request;
     
-    const user = this.userModel.findByEmail(email);
+    const userModel = this.getUserModel();
+    const user = userModel.findByEmail(email);
     if (!user) {
       // Don't reveal if email exists for security
       return {
@@ -203,7 +211,7 @@ export class AuthenticationService {
       };
     }
 
-    await this.userModel.generatePasswordResetToken(user.id);
+    await userModel.generatePasswordResetToken(user.id);
 
     return {
       success: true,
@@ -221,7 +229,8 @@ export class AuthenticationService {
     const { token, newPassword } = request;
 
     try {
-      await this.userModel.resetPassword(token, newPassword);
+      const userModel = this.getUserModel();
+      await userModel.resetPassword(token, newPassword);
       
       return {
         success: true,
@@ -243,7 +252,8 @@ export class AuthenticationService {
       const decoded = jwt.verify(token, this.config.jwtSecret) as TokenPayload;
       
       // Check if user still exists and is active
-      const user = this.userModel.findById(decoded.userId);
+      const userModel = this.getUserModel();
+      const user = userModel.findById(decoded.userId);
       if (!user || !user.emailVerified) {
         throw new Error('User not found or inactive');
       }
@@ -261,7 +271,9 @@ export class AuthenticationService {
     const payload: Omit<TokenPayload, 'iat' | 'exp'> = {
       userId: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName
     };
 
     return jwt.sign(payload, this.config.jwtSecret, {
@@ -296,12 +308,13 @@ export class AuthenticationService {
         throw new Error('Invalid token type');
       }
 
-      const user = this.userModel.findById(decoded.userId);
+      const userModel = this.getUserModel();
+      const user = userModel.findById(decoded.userId);
       if (!user || !user.emailVerified) {
         throw new Error('User not found or inactive');
       }
 
-      const safeUser = this.userModel.toSafeData(user);
+      const safeUser = userModel.toSafeData(user);
       const newToken = this.generateAccessToken(safeUser);
 
       return {
@@ -319,13 +332,14 @@ export class AuthenticationService {
    */
   getUserFromToken(token: string): UserSafeData {
     const decoded = this.validateToken(token);
-    const user = this.userModel.findById(decoded.userId);
+    const userModel = this.getUserModel();
+    const user = userModel.findById(decoded.userId);
     
     if (!user) {
       throw new Error('User not found');
     }
 
-    return this.userModel.toSafeData(user);
+    return userModel.toSafeData(user);
   }
 
   /**
@@ -336,7 +350,8 @@ export class AuthenticationService {
     message: string;
   }> {
     // Validate current password
-    const isValidPassword = await this.userModel.validateUserPassword(userId, currentPassword);
+    const userModel = this.getUserModel();
+    const isValidPassword = await userModel.validateUserPassword(userId, currentPassword);
     if (!isValidPassword) {
       return {
         success: false,
@@ -345,7 +360,7 @@ export class AuthenticationService {
     }
 
     // Update password
-    await this.userModel.updatePassword(userId, newPassword);
+    await userModel.updatePassword(userId, newPassword);
 
     return {
       success: true,

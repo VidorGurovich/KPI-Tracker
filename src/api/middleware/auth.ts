@@ -4,24 +4,17 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticationService } from '../../services/AuthenticationService';
+import { AuthenticationService, TokenPayload } from '../../services/AuthenticationService';
+import '../../types/auth'; // Import shared auth types
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        role: 'employee' | 'manager' | 'both';
-        firstName: string;
-        lastName: string;
-      };
-    }
-  }
-}
-
-const authService = new AuthenticationService();
+// Lazy initialization factory functions
+const getAuthService = () => new AuthenticationService({
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
+  jwtExpiresIn: '24h',
+  refreshTokenExpiresIn: '7d',
+  passwordResetTokenExpiresIn: '1h',
+  emailVerificationTokenExpiresIn: '24h'
+});
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -45,28 +38,22 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    // Validate token and get user data
+    // Validate token and get user payload directly
+    const authService = getAuthService();
     const tokenPayload = authService.validateToken(token);
     
-    // Get additional user details
-    const userService = new (await import('../../services/UserManagementService')).UserManagementService();
-    const userDetails = userService.getUserById(tokenPayload.userId);
-    
-    if (!userDetails) {
+    if (!tokenPayload) {
       return res.status(401).json({
         error: 'Unauthorized',
-        message: 'User not found',
+        message: 'Invalid token or user not found',
         timestamp: new Date().toISOString()
       });
     }
 
-    // Attach user to request
+    // Attach user to request with compatibility mapping
     req.user = {
-      id: tokenPayload.userId,
-      email: tokenPayload.email,
-      role: tokenPayload.role as 'employee' | 'manager' | 'both',
-      firstName: userDetails.firstName,
-      lastName: userDetails.lastName
+      ...tokenPayload,
+      id: tokenPayload.userId // Map userId to id for API route compatibility
     };
 
     next();
@@ -93,7 +80,7 @@ export const requireRole = (allowedRoles: ('employee' | 'manager' | 'both')[]) =
       });
     }
 
-    const userRole = req.user.role;
+    const userRole = req.user.role as 'employee' | 'manager' | 'both';
     const hasAccess = allowedRoles.includes(userRole) || 
                      (userRole === 'both' && (allowedRoles.includes('manager') || allowedRoles.includes('employee')));
 
