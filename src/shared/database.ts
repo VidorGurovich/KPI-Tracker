@@ -113,7 +113,7 @@ export class DatabaseManager {
   // Health check
   healthCheck(): boolean {
     try {
-      const result = this.db.prepare('SELECT 1 as test').get();
+      const result = this.db.prepare('SELECT 1 as test').get() as { test: number } | undefined;
       return result?.test === 1;
     } catch (error) {
       console.error('Database health check failed:', error);

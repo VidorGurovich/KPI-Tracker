@@ -18,6 +18,8 @@ export interface User {
   role: UserRole;
   emailVerified: boolean;
   verificationToken?: string;
+  resetToken?: string;
+  resetTokenExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -289,12 +291,88 @@ export class UserModel {
       role: row.role as UserRole,
       emailVerified: Boolean(row.email_verified),
       verificationToken: row.verification_token,
+      resetToken: row.reset_token,
+      resetTokenExpires: row.reset_token_expires ? new Date(row.reset_token_expires) : undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     };
   }
 
-  private toSafeData(user: User): UserSafeData {
+  /**
+   * Generate password reset token
+   */
+  generatePasswordResetToken(userId: number): string {
+    const token = this.generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    const stmt = this.db.prepare(`
+      UPDATE users 
+      SET reset_token = ?, reset_token_expires = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `);
+    
+    stmt.run(token, expiresAt.toISOString(), userId);
+    return token;
+  }
+
+  /**
+   * Reset password using token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    const stmt = this.db.prepare(`
+      SELECT * FROM users 
+      WHERE reset_token = ? AND reset_token_expires > CURRENT_TIMESTAMP
+    `);
+    
+    const user = stmt.get(token) as any;
+    if (!user) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    this.validatePassword(newPassword);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const updateStmt = this.db.prepare(`
+      UPDATE users 
+      SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    const result = updateStmt.run(passwordHash, user.id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Update user password
+   */
+  async updatePassword(userId: number, newPassword: string): Promise<boolean> {
+    this.validatePassword(newPassword);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const stmt = this.db.prepare(`
+      UPDATE users 
+      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    const result = stmt.run(passwordHash, userId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Validate password against user's stored hash
+   */
+  async validateUserPassword(userId: number, password: string): Promise<boolean> {
+    const user = this.findById(userId);
+    if (!user) return false;
+    
+    return bcrypt.compare(password, user.passwordHash);
+  }
+
+  /**
+   * Convert User to UserSafeData (public method)
+   */
+  toSafeData(user: User): UserSafeData {
     return {
       id: user.id,
       email: user.email,
@@ -306,4 +384,5 @@ export class UserModel {
       updatedAt: user.updatedAt
     };
   }
+
 }
