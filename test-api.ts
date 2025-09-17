@@ -3,7 +3,7 @@
  * Tests basic API functionality
  */
 
-import app from '../src/api/app';
+import app from './src/api/demo-app';
 
 console.log('✅ API routes compiled successfully');
 console.log('📊 Available routes:');

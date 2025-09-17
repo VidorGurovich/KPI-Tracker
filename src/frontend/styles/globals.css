@@ -106,8 +106,8 @@ body {
 @layer components {
   /* Premium button variants */
   .btn-premium {
-    @apply relative inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-premium hover:shadow-premium-lg;
+    @apply relative inline-flex items-center justify-center rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl;
     @apply hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150;
   }
   
@@ -122,28 +122,30 @@ body {
   
   /* Premium card styling */
   .card-premium {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-premium;
-    @apply hover:shadow-premium-lg hover:border-border/80 transition-all duration-300;
+    @apply bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl shadow-lg;
+    @apply hover:shadow-xl hover:border-gray-200/80 transition-all duration-300;
   }
   
   /* Premium input styling */
   .input-premium {
-    @apply flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background;
+    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white/50 px-3 py-2 text-sm;
     @apply backdrop-blur-sm transition-all duration-200;
     @apply file:border-0 file:bg-transparent file:text-sm file:font-medium;
-    @apply placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
-    @apply hover:border-border/80 focus:border-primary/50;
+    @apply hover:border-gray-400 focus:border-blue-500;
   }
   
   /* Premium glass morphism */
   .glass {
-    @apply bg-background/80 backdrop-blur-xl border border-border/50;
+    @apply bg-white/80 backdrop-blur-xl border border-gray-200/50;
   }
 
   .glass-dark {
-    @apply bg-background/60 backdrop-blur-2xl border border-border/30;
-  }  /* Premium gradient backgrounds */
+    @apply bg-gray-900/60 backdrop-blur-2xl border border-gray-700/30;
+  }
+  
+  /* Premium gradient backgrounds */
   .bg-gradient-premium {
     @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50;
   }
@@ -169,7 +171,7 @@ body {
   
   /* Loading shimmer effect */
   .shimmer {
-    @apply relative overflow-hidden bg-muted/20;
+    @apply relative overflow-hidden bg-gray-100;
   }
   
   .shimmer::after {
@@ -180,7 +182,7 @@ body {
   
   /* Premium focus states */
   .focus-premium {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500;
   }
   
   /* Status indicators */
@@ -241,6 +243,6 @@ body {
   }
   
   .elevation-premium {
-    @apply shadow-premium hover:shadow-premium-lg transition-shadow duration-300;
+    @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
   }
 }
