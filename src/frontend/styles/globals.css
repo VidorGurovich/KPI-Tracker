@@ -65,39 +65,42 @@
   --surface-variant: 217.2 32.6% 17.5%;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  
-  html {
-    @apply antialiased;
-    font-feature-settings: 'cv11', 'ss01';
-    font-variation-settings: 'opsz' 32;
-  }
-  
-  body {
-    @apply bg-background text-foreground font-sans;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
-  }
-  
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    @apply w-2;
-  }
-  
-  ::-webkit-scrollbar-track {
-    @apply bg-muted/20;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30;
-  }
-  
-  /* Selection styling */
-  ::selection {
-    @apply bg-primary/20 text-primary-foreground;
-  }
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+  font-variation-settings: 'opsz' 32;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+  background-color: white;
+  color: #0f172a;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(59, 130, 246, 0.2);
+  color: #1e40af;
 }
 
 @layer components {
@@ -137,12 +140,10 @@
   .glass {
     @apply bg-background/80 backdrop-blur-xl border border-border/50;
   }
-  
+
   .glass-dark {
     @apply bg-background/60 backdrop-blur-2xl border border-border/30;
-  }
-  
-  /* Premium gradient backgrounds */
+  }  /* Premium gradient backgrounds */
   .bg-gradient-premium {
     @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50;
   }

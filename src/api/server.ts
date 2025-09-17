@@ -12,8 +12,12 @@ console.log('✅ Database initialized');
 
 // Now import and start the app
 import('./app').then((appModule) => {
-  // The app is already set up and started in app.ts
   console.log('📦 Application modules loaded successfully');
+  // Keep the process alive
+  process.on('SIGTERM', () => {
+    console.log('� Shutting down gracefully...');
+    process.exit(0);
+  });
 }).catch((error) => {
   console.error('❌ Failed to start application:', error);
   process.exit(1);

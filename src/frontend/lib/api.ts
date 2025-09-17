@@ -297,6 +297,35 @@ class ApiClient {
     return this.request(`/api/kpis/instances/${instanceId}/progress`);
   }
 
+  // Dashboard data
+  async getDashboardData(): Promise<ApiResponse & {
+    data: {
+      kpis: Array<{
+        title: string;
+        value: number;
+        target: number;
+        trend: { current: number; previous: number };
+        icon: string;
+        color: string;
+      }>;
+      recentActivity: Array<{
+        user: string;
+        action: string;
+        time: string;
+      }>;
+      user: {
+        stats: {
+          totalKpis: number;
+          completedKpis: number;
+          teamSize: number;
+          averageScore: number;
+        };
+      };
+    };
+  }> {
+    return this.request('/api/dashboard');
+  }
+
   // Health check
   async healthCheck(): Promise<ApiResponse> {
     return this.request('/api/health');

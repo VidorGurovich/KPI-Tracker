@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '../ui/button-clean'
 import { 
@@ -20,6 +20,7 @@ import { Input } from '../ui/input'
 import { PremiumAvatar } from '../ui/avatar'
 import { useTheme } from '../ThemeProvider'
 import { formatNumber, formatPercentage, getTrend } from '../../lib/utils'
+import { apiClient } from '../../lib/api'
 
 interface DashboardProps {
   user: {
@@ -33,42 +34,103 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const { theme, setTheme } = useTheme()
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data for demonstration
-  const kpiData = [
-    {
-      title: "Revenue",
-      value: 125000,
-      target: 150000,
-      trend: { current: 125000, previous: 110000 },
-      icon: <BarChart3 className="h-5 w-5" />,
-      color: "text-green-600"
-    },
-    {
-      title: "Team Members",
-      value: 24,
-      target: 30,
-      trend: { current: 24, previous: 22 },
-      icon: <Users className="h-5 w-5" />,
-      color: "text-blue-600"
-    },
-    {
-      title: "Goals Completed",
-      value: 18,
-      target: 25,
-      trend: { current: 18, previous: 15 },
-      icon: <Target className="h-5 w-5" />,
-      color: "text-purple-600"
-    },
-    {
-      title: "Growth Rate",
-      value: 12.5,
-      target: 15,
-      trend: { current: 12.5, previous: 10.2 },
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: "text-orange-600"
+  // Load dashboard data
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.getDashboardData()
+        setDashboardData(response.data)
+        setError(null)
+      } catch (error: any) {
+        console.error('Failed to load dashboard data:', error)
+        setError('Failed to load dashboard data')
+        // Fallback to mock data
+        setDashboardData({
+          kpis: [
+            {
+              title: "Active KPIs",
+              value: 8,
+              target: 10,
+              trend: { current: 8, previous: 6 },
+              icon: "target",
+              color: "text-blue-600"
+            },
+            {
+              title: "Team Members",
+              value: 5,
+              target: 8,
+              trend: { current: 5, previous: 4 },
+              icon: "users",
+              color: "text-green-600"
+            },
+            {
+              title: "Completed Goals",
+              value: 12,
+              target: 15,
+              trend: { current: 12, previous: 10 },
+              icon: "check-circle",
+              color: "text-purple-600"
+            },
+            {
+              title: "Average Score",
+              value: 85.5,
+              target: 90,
+              trend: { current: 85.5, previous: 82.3 },
+              icon: "trending-up",
+              color: "text-orange-600"
+            }
+          ],
+          recentActivity: [
+            { user: 'Demo Manager', action: 'Updated Q4 Revenue target', time: '2 hours ago' },
+            { user: 'Demo Employee', action: 'Completed Customer Satisfaction KPI', time: '4 hours ago' },
+            { user: 'Team Lead', action: 'Added new team member', time: '1 day ago' },
+          ]
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ]
+
+    loadDashboardData()
+  }, [])
+
+  // Helper function to get icon component
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'target': return <Target className="h-5 w-5" />
+      case 'users': return <Users className="h-5 w-5" />
+      case 'check-circle': return <Target className="h-5 w-5" />
+      case 'trending-up': return <TrendingUp className="h-5 w-5" />
+      default: return <BarChart3 className="h-5 w-5" />
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-premium flex items-center justify-center">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div
+            className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-lg font-medium text-gradient">Loading Dashboard...</p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  const kpiData = dashboardData?.kpis || []
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -89,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     <div className="min-h-screen bg-gradient-premium">
       {/* Header */}
       <motion.header
-        className="glass border-b border-border/50 sticky top-0 z-50"
+        className="glass border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -178,7 +240,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
-            {kpiData.map((kpi, index) => {
+            {kpiData.map((kpi: any, index: number) => {
               const trend = getTrend(kpi.trend.current, kpi.trend.previous)
               const progress = (kpi.value / kpi.target) * 100
 
@@ -190,7 +252,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         {kpi.title}
                       </CardTitle>
                       <div className={kpi.color}>
-                        {kpi.icon}
+                        {getIconComponent(kpi.icon)}
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -251,11 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { user: 'John Doe', action: 'Updated Q4 Revenue target', time: '2 hours ago' },
-                    { user: 'Jane Smith', action: 'Completed Customer Satisfaction KPI', time: '4 hours ago' },
-                    { user: 'Mike Johnson', action: 'Added new team member', time: '1 day ago' },
-                  ].map((activity, index) => (
+                  {(dashboardData?.recentActivity || []).map((activity: any, index: number) => (
                     <motion.div
                       key={index}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
