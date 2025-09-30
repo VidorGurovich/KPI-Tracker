@@ -8,16 +8,40 @@ import { body, validationResult } from 'express-validator';
 import { AuthenticationService } from '../../services/AuthenticationService';
 
 const router = Router();
-const authService = new AuthenticationService();
+
+// Simple test route to verify router is working
+router.get('/test', (req: Request, res: Response) => {
+  console.log('✅ Auth test route hit!');
+  res.json({ message: 'Auth router is working!', timestamp: new Date().toISOString() });
+});
+
+console.log('🔄 Auth routes module loading...');
+
+// Lazy initialization factory function
+const getAuthService = () => {
+  try {
+    return new AuthenticationService({
+      jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
+      jwtExpiresIn: '24h',
+      refreshTokenExpiresIn: '7d',
+      passwordResetTokenExpiresIn: '1h',
+      emailVerificationTokenExpiresIn: '24h'
+    });
+  } catch (error: any) {
+    console.error('❌ Error creating AuthenticationService:', error);
+    throw error;
+  }
+};
 
 // Validation middleware
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const firstError = errors.array()[0];
     return res.status(400).json({
-      error: 'Validation Error',
-      message: 'Invalid input data',
-      details: errors.array(),
+      success: false,
+      error: firstError.msg,
+      code: 'VALIDATION_ERROR',
       timestamp: new Date().toISOString()
     });
   }
@@ -35,9 +59,9 @@ router.post('/register', [
     .withMessage('Valid email is required'),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters')
+    .withMessage('password must be at least 8 characters with complexity requirements')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .withMessage('password must contain uppercase, lowercase, number, and special character'),
   body('firstName')
     .trim()
     .isLength({ min: 1, max: 50 })
@@ -48,12 +72,13 @@ router.post('/register', [
     .withMessage('Last name is required and must be less than 50 characters'),
   body('role')
     .isIn(['employee', 'manager', 'both'])
-    .withMessage('Role must be employee, manager, or both'),
+    .withMessage('role must be employee, manager, or both'),
   handleValidationErrors
 ], async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, firstName, lastName, role } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.register({
       email,
       password,
@@ -63,6 +88,7 @@ router.post('/register', [
     });
 
     res.status(201).json({
+      success: true,
       message: result.message,
       user: {
         id: result.user.id,
@@ -75,8 +101,25 @@ router.post('/register', [
       verificationRequired: result.verificationRequired,
       timestamp: new Date().toISOString()
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    
+    // Handle specific registration errors
+    if (error.message && error.message.includes('already exists')) {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already registered',
+        code: 'EMAIL_EXISTS',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Registration failed',
+      code: 'REGISTRATION_ERROR',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -97,9 +140,11 @@ router.post('/login', [
   try {
     const { email, password } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.login({ email, password });
 
     res.json({
+      success: true,
       message: 'Login successful',
       token: result.token,
       user: {
@@ -113,8 +158,34 @@ router.post('/login', [
       expiresIn: result.expiresIn,
       timestamp: new Date().toISOString()
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error('Login error:', error);
+    
+    // Handle specific authentication errors
+    if (error.message && error.message.includes('Invalid credentials')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    if (error.message && error.message.includes('verify')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Please verify your email before logging in',
+        code: 'EMAIL_NOT_VERIFIED',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Login failed',
+      code: 'LOGIN_ERROR',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -131,17 +202,20 @@ router.post('/verify', [
   try {
     const { token } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.verifyEmail(token);
 
     if (!result.success) {
       return res.status(400).json({
-        error: 'Verification Failed',
-        message: result.message,
+        success: false,
+        error: result.message,
+        code: 'INVALID_TOKEN',
         timestamp: new Date().toISOString()
       });
     }
 
     res.json({
+      success: true,
       message: result.message,
       user: result.user ? {
         id: result.user.id,
@@ -172,6 +246,7 @@ router.post('/forgot-password', [
   try {
     const { email } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.requestPasswordReset({ email });
 
     res.json({
@@ -202,6 +277,7 @@ router.post('/reset-password', [
   try {
     const { token, newPassword } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.confirmPasswordReset({ token, newPassword });
 
     if (!result.success) {
@@ -235,6 +311,7 @@ router.post('/refresh', [
   try {
     const { refreshToken } = req.body;
     
+    const authService = getAuthService();
     const result = await authService.refreshToken({ refreshToken });
 
     res.json({
@@ -255,5 +332,7 @@ router.post('/refresh', [
     next(error);
   }
 });
+
+console.log('🔄 Auth routes exported, route stack:', router.stack?.length || 0);
 
 export { router as authRouter };
